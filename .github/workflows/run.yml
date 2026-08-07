@@ -1,0 +1,40 @@
+name: Process
+run-name: maxupload-${{ inputs.request_id }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      request_id:
+        required: true
+        type: string
+      job:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: maxupload-${{ inputs.request_id }}
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Prepare
+        run: |
+          python -m pip install --disable-pip-version-check -q httpx requests transferit-py cryptography
+
+      - name: Process
+        env:
+          P: ${{ secrets.P }}
+          J: ${{ secrets.J }}
+          REQUEST_ID: ${{ inputs.request_id }}
+          ENCRYPTED_JOB: ${{ inputs.job }}
+        run: |
+          set -euo pipefail
+          test "${#REQUEST_ID}" -eq 32
+          echo "$P" | base64 -d > "$RUNNER_TEMP/p.py"
+          python "$RUNNER_TEMP/p.py" "$REQUEST_ID" "$ENCRYPTED_JOB"
